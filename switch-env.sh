@@ -5,7 +5,7 @@ if [ "$(basename $(pwd))" != "local" ]; then
   fi
 fi
 
-_list=($(s -ld $(find .) | grep local$ | awk '{print $9}'))
+_list=$(ls -ld $(find .) | grep local$ | awk '{print $9}')
 
 env=$(cat ./config.ini | grep 'ENV' | awk '{print $2}')
 
