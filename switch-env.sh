@@ -7,7 +7,7 @@ fi
 
 _list=$(ls -ld $(find .) | grep local$ | awk '{print $9}')
 
-env=$(cat ./config.ini | grep 'ENV' | awk '{print $2}')
+env=$(cat ./config.ini | grep 'ENV' | awk '{print $2}') 
 
 if [ "$env" = "localhost" ]; then
     echo "Switch setting to production."
