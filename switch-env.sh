@@ -1,5 +1,8 @@
 if [ "$(basename $(pwd))" != "local" ]; then
   cd local
+  if [ "$(basename $(pwd))" = "local" ] && [ ! -f "./config.ini" ]; then
+    echo "ENV localhost" > ./config.ini
+  fi
 fi
 
 _list=($(ls -Rla | grep 'local$' | awk '{print $9}'))
