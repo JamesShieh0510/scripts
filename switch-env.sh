@@ -1,7 +1,7 @@
 if [ "$(basename $(pwd))" != "local" ]; then
   cd local
   if [ "$(basename $(pwd))" = "local" ] && [ ! -f "./config.ini" ]; then
-    echo "ENV localhost" > ./config.ini
+    echo "ENV production" > ./config.ini
   fi
 fi
 
