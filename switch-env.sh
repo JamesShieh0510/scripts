@@ -35,3 +35,6 @@ fi
 
 cd ..
 
+go mod tidy
+go test ./...
+
