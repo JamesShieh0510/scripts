@@ -1,0 +1,1 @@
+cat *.proto | sed -rn 's/^rpc [a-zA-Z]+\((.*)\) returns \((.*)\) \{\};/message \1 {\n}\nmessage \2 {\n}/p'
