@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 echo "//generate from script..."
 text=$(cat ./*/*.proto */*/*.proto 2>/dev/null | sed -rn 's/[[:space:]]+rpc [a-zA-Z]+\((.*)\) returns \((.*)\) \{\};/message \1 {\nmessage \2 {/p'
