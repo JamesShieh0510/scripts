@@ -8,7 +8,8 @@ fi
 path_of_sql_files='./sql-files'
 mkdir -p $path_of_sql_files
 
-_list=($(ls -l $path_of_sql_files/*.sql |awk '{print $9}')) # for macOS
+_list=$"$(ls -l $path_of_sql_files/*.sql |awk '{print $9}')" # for macOS
+
 # _list=($(ls -l *.sql |awk '{print $9}')) # for ubuntu
 
 rm -f $output_file
