@@ -8,6 +8,7 @@ output=""
 cat temp | while read line 
 do
   target=$(cat ./*/*.proto */*/*.proto 2>/dev/null | grep "$line") 
+  echo "target:$target, line:$line"
   if [ -z $target ]
   then
     output="$output\n$line\n\t\n}"
