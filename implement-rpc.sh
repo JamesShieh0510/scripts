@@ -1,13 +1,14 @@
 #!/bin/sh
 
-echo "//craete from the script......"
 text=$(cat ./*/*.proto */*/*.proto 2>/dev/null | sed -rn 's/[[:space:]]+rpc [a-zA-Z]+\((.*)\) returns \((.*)\) \{\};/message \1 {\nmessage \2 {/p'
 )
-echo $text > temp
+
+#The $'...' construct expands embedded ANSI escape sequences.
+echo $"$text" > temp
 output=""
 while read line; do
-  target=$(cat ./*/*.proto */*/*.proto 2>/dev/null | grep "$line") 
-  if [ -z $target ]
+  target=$(cat ./*/*.proto */*/*.proto 2>/dev/null | grep "$line")
+  if [ -z "$target" ]
   then
     output="$output\n$line\n\t\n}"
   fi
