@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 target_module=$1
 if [ -z $target_module ]
