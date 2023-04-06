@@ -1,3 +1,4 @@
+#bash <(curl -s https://raw.githubusercontent.com/JamesShieh0510/scripts/master/install-openai-translator-and-ocr-tool.sh)
 curl -O https://files.littlebird.com.au/ocr2.zip
 unzip ocr2.zip
 sudo cp ocr /usr/local/bin
