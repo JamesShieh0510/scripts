@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kube-proxy
+  namespace: kube-logging
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kube-proxy
+  template:
+    metadata:
+      labels:
+        app: kube-proxy
+    spec:
+      containers:
+      - name: alpine-curl
+        image: alpine:latest
+        command: ["sleep", "infinity"]
+        resources:
+          requests:
+            cpu: 100m
+            memory: 100Mi
+        securityContext:
+          privileged: true   # 將容器設置為特權容器
+          runAsUser: 0 # 使用 root 使用者運行容器
