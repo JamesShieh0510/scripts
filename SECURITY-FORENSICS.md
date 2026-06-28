@@ -51,7 +51,7 @@ sudo ./macos-supply-chain-forensics.sh
 | 3 | 持久化:cron(系統+使用者+cron.d)、systemd unit/timer、rc.local、shell rc 注入、`/etc/ld.so.preload` | 常駐 / rootkit |
 | 4 | **SSH 橫向移動**:authorized_keys 逐行列出、**無 passphrase 私鑰**、known_hosts 範圍 | 用 SSH key 跳 AWS |
 | 5 | 對外連線(`ss`/`netstat`)+ 監聽埠 | 資料外洩 / 礦池 |
-| 6 | npm:`_logs`、已知遭攻陷套件 IOC、含 install 腳本又讀 AWS/SSH/token 的套件 | 安裝期竊密源頭 |
+| 6 | npm:`_logs`、已知遭攻陷套件 IOC(**版本感知**)、含 install 腳本又讀 AWS/SSH/token 的套件 | 安裝期竊密源頭 |
 | 7 | Shell 歷史 `curl\|bash` / base64 混淆 | 下載執行痕跡 |
 | 8 | 套件管理器 log + auth.log 登入紀錄 | 較難被清的旁證 |
 | 9 | 近 14 天新建的可執行檔 | 殘留物 |
@@ -63,6 +63,11 @@ sudo ./macos-supply-chain-forensics.sh
 - **`codesign -dv` 驗簽章**(macOS 獨有強項:快速分辨「官方簽章」vs「來路不明」)
 - `auth.log` → `log show`(統一日誌)
 - npm IOC / shell 歷史邏輯與 Linux 版共用
+
+#### npm IOC 為「版本感知」(兩版共用)
+比對的是**實際安裝版本 vs 已知惡意版本**,不是只比對套件名稱。
+像 `coa`、`ua-parser-js`、`event-stream`、`eslint-scope`、`rc` 這些「曾經某個版本中標、但早已修好」的熱門套件,
+只有裝到**確切的惡意版本**才告警,乾淨版本不會誤報。清單為代表性(非窮舉),新型變種未必涵蓋。
 
 #### macOS 版已內建的誤報過濾
 - **`/tmp` 映射**:對涉及的進程驗簽章,已知開發者(如 Kensington 驅動用 boost 共享記憶體)降為「注意」而非紅色
@@ -92,7 +97,54 @@ sudo ./macos-supply-chain-forensics.sh
 
 ---
 
-## 5. 附:nhiicc-toggle.sh(健保卡元件啟停)
+## 5. harden-package-managers.sh(關閉安裝期腳本)
+
+一鍵關閉各套件管理器的 `preinstall`/`postinstall` 腳本——擋掉約 9 成「安裝期竊密」。冪等,可重複執行。
+
+```bash
+./harden-package-managers.sh status   # 只查狀態
+./harden-package-managers.sh          # 套用(npm 設 ignore-scripts=true,寫入 ~/.npmrc)
+./harden-package-managers.sh revert    # 還原
+```
+
+涵蓋:
+- **npm**:`ignore-scripts=true`(一次設定,跨所有專案永久生效)
+- **pnpm**:10+ 預設已封鎖;舊版透過 `~/.npmrc` 涵蓋
+- **yarn**:Berry 設 `enableScripts: false`;Classic 1.x 無全域設定,給出 flag / 包裝 / 換工具建議
+- **bun**:預設即封鎖未信任套件,僅回報狀態
+
+> 只影響未來安裝,不保護已裝好的 `node_modules`。合法 build 被擋時用 `npm rebuild <pkg>` 針對性放行。
+
+---
+
+## 6. ssh-add-passphrases.sh(替既有私鑰補 passphrase)
+
+互動式掃描 `~/.ssh` 下「沒加 passphrase」的私鑰,逐把呼叫 `ssh-keygen -p` 補上。
+加 passphrase **不改變公鑰、不影響伺服器端**,只加密本機私鑰檔。
+
+```bash
+./ssh-add-passphrases.sh --dry-run   # 只列出哪些沒加密
+./ssh-add-passphrases.sh             # 互動逐把加(請在自己的終端機跑,需 TTY 輸入密碼)
+```
+
+判斷邏輯:舊格式看標頭(`ENCRYPTED`/`DEK-Info`),新 OpenSSH 格式靠「空密碼能否解開」。
+相容 macOS 內建 bash 3.2。
+
+> ⚠️ **對已外洩的 key 加 passphrase 無效** —— 攻擊者已有未加密副本。
+> 曾在受害機上的正式機 / AWS / bastion key 應「**重新產生** + 換掉伺服器公鑰 + 撤銷舊的」,
+> 而非只加 passphrase。本機自用且確定沒外洩的 key 才適合單純補 passphrase。
+
+加完建議存進 keychain 免每次輸入:
+```bash
+ssh-add --apple-use-keychain ~/.ssh/id_ed25519
+# ~/.ssh/config:  Host *
+#                     UseKeychain yes
+#                     AddKeysToAgent yes
+```
+
+---
+
+## 7. 附:nhiicc-toggle.sh(健保卡元件啟停)
 
 健保卡網路服務元件 (mNHIICC) 由健保署官方簽章 (Team ID `NRMY799KE6`),**是合法程式**,但常駐時很吃 CPU 且設了 KeepAlive(被殺會自動重生)。沒在用讀卡機時可關掉:
 

@@ -157,15 +157,46 @@ hdr "6. npm / Node 供應鏈跡證"
 log "  -- ~/.npm/_logs 近期紀錄 --"
 ls -lt ~/.npm/_logs 2>/dev/null | head -6 | sed 's/^/        /' | tee -a "$REPORT" || note "(無 npm logs)"
 
-log "  -- 已知遭攻陷 npm 套件比對 (代表性,非窮舉) --"
-IOC_PKGS="node-ipc @ctrl/tinycolor rand-user-agent @ctrl/deluge coa rc ua-parser-js event-stream flatmap-stream getcookies eslint-scope"
-ioc_found=0
-for p in $IOC_PKGS; do
-    find "$HOME" -maxdepth 8 -type d -path "*/node_modules/$p" 2>/dev/null | head -2 | while read -r d; do
-        echo "HIT|$p|$d"
-    done
-done | while IFS='|' read -r _ p d; do hit "已知遭攻陷套件 $p: $d"; done
-ok "(若無紅色項目,代表未命中已知 IOC;新型變種未必在清單內)"
+log "  -- 已知遭攻陷 npm 套件比對 (★版本感知:只比對到惡意版本才告警) --"
+# 格式:套件名|惡意版本(逗號分隔)。只有「裝到這些版本」才是真的中標;
+# 同名套件的乾淨版本(多數情況)不會誤報。清單為代表性,非窮舉。
+IOC_DB='node-ipc|9.2.2,10.1.1,10.1.2,11.0.0,11.1.0
+event-stream|3.3.6
+flatmap-stream|0.1.1
+eslint-scope|3.7.2
+ua-parser-js|0.7.29,0.8.0,1.0.0
+coa|2.0.3,2.0.4
+rc|1.2.9,1.3.9,2.3.9
+@ctrl/tinycolor|4.1.1,4.1.2'
+
+pkg_ver() {
+    local pj="$1/package.json"
+    [ -f "$pj" ] || return 1
+    if command -v jq >/dev/null 2>&1; then
+        jq -r '.version // empty' "$pj" 2>/dev/null
+    else
+        grep -m1 -E '^[[:space:]]*"version"[[:space:]]*:' "$pj" 2>/dev/null | sed -E 's/.*"version"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/'
+    fi
+}
+
+ioc_results=$(while IFS='|' read -r pkg bad; do
+    [ -z "$pkg" ] && continue
+    while IFS= read -r d; do
+        [ -z "$d" ] && continue
+        v=$(pkg_ver "$d"); [ -z "$v" ] && continue
+        echo ",$bad," | grep -q ",$v," && echo "$pkg|$v|$d"
+    done < <(find "$HOME" -maxdepth 8 -type d -path "*/node_modules/$pkg" 2>/dev/null)
+done <<EOF
+$IOC_DB
+EOF
+)
+if [ -n "$ioc_results" ]; then
+    while IFS='|' read -r pkg v d; do
+        [ -n "$pkg" ] && hit "惡意版本 $pkg@$v: $d"
+    done <<< "$ioc_results"
+else
+    ok "未發現已知惡意版本(已比對實際版本,非僅比對名稱)"
+fi
 
 # =====================================================================
 hdr "7. Shell 歷史:下載執行 / 編碼混淆"
